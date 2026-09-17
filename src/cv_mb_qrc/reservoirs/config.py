@@ -33,7 +33,7 @@ class CVConfig:
     efficiency: float = 1.0
     adaptive_angle: float = 0.0
     tier: str = "B"
-    feature_preset: str = "quadratic_nonredundant"
+    feature_preset: str | None = None
     readout_mode: str = "state_oracle"
     n_replicas: int = 1
     n_readout_shots: int = 1
@@ -72,8 +72,14 @@ class CVConfig:
             raise ValueError("Invalid transmissivity or detector efficiency")
         if self.tier not in ("A", "B"):
             raise BackendCapabilityError("Gaussian CV reservoir supports Tier A/B only")
-        if self.feature_preset not in ("minimal_linear", "full_gaussian", "quadratic_nonredundant", "physical_probe", "diagnostic_redundant"):
+        canonical = {"A": "tier_a", "B": "tier_b"}
+        diagnostic = {"diagnostic_quadratic", "diagnostic_redundant"}
+        preset = canonical[self.tier] if self.feature_preset is None else self.feature_preset
+        if preset not in set(canonical.values()) | diagnostic:
             raise ValueError("Unknown CV feature preset")
+        if preset in canonical.values() and preset != canonical[self.tier]:
+            raise ValueError("tier and feature_preset disagree; use a diagnostic preset explicitly")
+        object.__setattr__(self, "feature_preset", preset)
         if self.readout_mode not in ("state_oracle", "physical_probe"):
             raise ValueError("readout_mode must be state_oracle or physical_probe")
         if not 0 < self.probe_strength <= 1 or self.variance_floor < 0:

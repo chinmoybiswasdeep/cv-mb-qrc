@@ -57,7 +57,12 @@ class GaussianClassicalTwin:
         return self.features()
 
     def features(self):
-        if self.config.feature_preset == "minimal_linear":
-            return self.mean.copy()
-        diag = np.diag(self.covariance)
-        return np.r_[self.mean, diag, self.mean**2 + diag]
+        preset = self.config.feature_preset
+        diagonal = np.diag(self.covariance)
+        if preset == "tier_a":
+            return np.r_[self.mean, diagonal]
+        if preset == "tier_b":
+            return np.r_[self.mean, self.covariance[np.triu_indices(len(self.mean))]]
+        if preset == "diagnostic_quadratic":
+            return np.r_[self.mean, diagonal, self.mean**2 + diagonal]
+        raise NotImplementedError("The redundant diagnostic preset is intentionally oracle-only")

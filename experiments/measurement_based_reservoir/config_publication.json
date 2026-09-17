@@ -1,5 +1,5 @@
 {
-  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "length": 10000,
+  "study_class": "publication", "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "length": 10000,
   "washout": 200, "gap": 50, "delays": 20, "window": 20,
   "dataset_seed": 1729, "dataset_seeds": [1729, 1730, 1731, 1732, 1733],
   "regularizations": [0.000001, 0.0001, 0.01, 1.0],

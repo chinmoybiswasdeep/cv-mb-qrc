@@ -2,6 +2,7 @@
   "seeds": [0], "length": 120, "washout": 10, "gap": 2,
   "delays": 3, "window": 3, "dataset_seed": 1729,
   "regularizations": [0.0001, 0.01], "transmissivities": [0.8],
-  "noise_strengths": [0.0], "shot_counts": [8], "run_fock": false,
+  "noise_strengths": [0.0], "shot_counts": [8], "run_fock": false, "run_mentpy": false,
+  "study_class": "ci-smoke", "enabled_methods": ["cv_A", "cv_B", "delay"],
   "purpose": "CI functionality smoke test only; not a scientific result"
 }

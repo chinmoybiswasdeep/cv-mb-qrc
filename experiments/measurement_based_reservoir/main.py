@@ -146,8 +146,15 @@ def evaluate(name, seed, task, series, split_indices, config, *, factory=None, c
 
 
 def run(config, output, *, resume=False):
-    if len(config["seeds"]) < 10 or len(set(config["seeds"])) != len(config["seeds"]):
-        raise ValueError("Use at least ten distinct seeds")
+    study_class = config.get("study_class", "development")
+    if study_class not in ("ci-smoke", "development", "publication"):
+        raise ValueError("study_class must be ci-smoke, development, or publication")
+    if len(set(config["seeds"])) != len(config["seeds"]):
+        raise ValueError("Reservoir seeds must be distinct")
+    if study_class != "ci-smoke" and len(config["seeds"]) < 10:
+        raise ValueError("Scientific studies require at least ten reservoir seeds")
+    if study_class == "publication" and len(config.get("dataset_seeds", [])) < 5:
+        raise ValueError("Publication studies require at least five dataset seeds")
     if config["washout"] < max(config["delays"], config["window"], 10):
         raise ValueError("Washout must cover input history and NARMA initialization")
     output.mkdir(parents=True, exist_ok=True)
@@ -191,6 +198,9 @@ def run(config, output, *, resume=False):
                     jobs.append(
                         (name, None, ClassicalFeatures(kind, dimension, seed, config["window"]))
                     )
+            enabled = config.get("enabled_methods")
+            if enabled is not None:
+                jobs = [job for job in jobs if job[0] in enabled]
             for name, factory, classical in jobs:
                 key = f"{task}_{name}_{seed}"
                 if key in manifest:
@@ -246,7 +256,8 @@ def run(config, output, *, resume=False):
             "perturbation": fading_memory(factory, data["iid"][:80], at=10),
         }
     atomic_json(output / "raw/dynamics.json", diagnostics)
-    atomic_json(output / "raw/mentpy.json", compare_wire(np.array([1, 1j]) / np.sqrt(2)))
+    if config.get("run_mentpy", False):
+        atomic_json(output / "raw/mentpy.json", compare_wire(np.array([1, 1j]) / np.sqrt(2)))
     shot_rows = []
     for shots in config["shot_counts"]:
         for seed in config["seeds"]:
@@ -273,10 +284,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     root = Path(__file__).resolve().parent
     parser.add_argument("--config", type=Path, default=root / "config_small.json")
-    parser.add_argument("--output", type=Path, default=root / "results")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--resume", action="store_true", help="Resume identical saved config")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8-sig"))
+    if args.output is None:
+        output_name = {
+            "ci-smoke": "results_ci",
+            "development": "results_development",
+            "publication": "results_publication",
+        }[config.get("study_class", "development")]
+        args.output = root / output_name
     try:
         run(config, args.output, resume=args.resume)
         from supplementary import run_supplementary
