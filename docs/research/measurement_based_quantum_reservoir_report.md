@@ -1,5 +1,12 @@
 # Measurement-based quantum reservoir implementation report
 
+> **Legacy report.** Numerical counts, scores and figures below describe the
+> preserved `results_legacy/` bundle and do not validate V3. V3 changed Tier B
+> to means plus full covariance, added the affine Gaussian twin and
+> permutation-null capacity, and separated CI/development/publication outputs.
+> Only state-oracle readout is currently supported; physical probe readout fails
+> explicitly. Regenerate a new report only from a verified current manifest.
+
 ## Outcome and architecture
 
 The implementation now lives in this standalone `cv-mb-qrc` repository.
@@ -31,7 +38,7 @@ repository metadata, README, documentation and package were added here. The pack
 Four test files, the design document, this report, a tutorial and notebook 06 were
 added. Experiment sources are `main.py`, `reproduce.py`, `supplementary.py`, two
 JSON configurations and a README. The raw-run inventory is
-`experiments/measurement_based_reservoir/results/raw/manifest.json` (420 entries).
+`experiments/measurement_based_reservoir/results_legacy/raw/manifest.json` (420 entries).
 Other raw records preserve datasets, split indices, environment/source hashes,
 dynamics, noise/shot controls, washout, scaling, MentPy checks, Fock convergence
 and execution incidents. Generated CSV/JSON/Markdown summaries and 17 figures in
@@ -192,8 +199,8 @@ python -m pytest --cov=src/cv_mb_qrc --cov-fail-under=90
 python -m ruff check src tests experiments
 python -m ruff format --check src tests experiments
 python -m mypy
-python -m build --outdir experiments/measurement_based_reservoir/results/build
-python -m mkdocs build --strict --site-dir experiments/measurement_based_reservoir/results/site
+python -m build --outdir dist
+python -m mkdocs build --strict --site-dir site
 python experiments/measurement_based_reservoir/main.py
 python experiments/measurement_based_reservoir/reproduce.py
 ```
@@ -203,7 +210,7 @@ For the separate Fock numerical record:
 ```python
 from cv_mb_qrc.reservoirs.fock import cutoff_study
 from cv_mb_qrc.reservoirs.results import atomic_json
-atomic_json("experiments/measurement_based_reservoir/results/raw/fock.json",
+atomic_json("experiments/measurement_based_reservoir/results_legacy/raw/fock.json",
             cutoff_study([.02, .04], cutoffs=(8, 12, 16)))
 ```
 

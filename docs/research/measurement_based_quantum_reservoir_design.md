@@ -1,5 +1,12 @@
 ﻿# Measurement-based quantum reservoir design and audit
 
+> **V3 scope note.** The committed numerical artifacts referenced below are
+> historical and now live in `results_legacy/`. Current Tier B is first moments
+> plus the full upper covariance triangle. `GaussianClassicalTwin` is the
+> mandatory equivalence baseline. Physical tap-homodyne readout remains an
+> explicit unsupported capability, Graphix remains a one-qubit collision
+> reference, and MentPy validates only the corrected pure-wire subset.
+
 Audit date: 2026-09-17. Implementation belongs to `cv-mb-qrc`; PhotoGraphiQ
 remains the execution/physics layer. No simulator is duplicated in the runtime.
 

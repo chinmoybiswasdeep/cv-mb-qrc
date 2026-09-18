@@ -76,8 +76,8 @@ def test_vacuum_zero_coupling_and_recurrence():
     m = CVMBReservoir(c)
     r = m.run_sequence([0, 1, -1])
     np.testing.assert_allclose(r.features[:, :2], 0, atol=1e-14)
-    np.testing.assert_allclose(r.features[:, 2:4], 1, atol=1e-14)
-    np.testing.assert_allclose(r.features[:, 4], 0, atol=1e-14)
+    np.testing.assert_allclose(r.features[:, [2, 4]], 1, atol=1e-14)
+    np.testing.assert_allclose(r.features[:, 3], 0, atol=1e-14)
     recurrent = CVMBReservoir().run_sequence([1, 0]).features[-1]
     static = CVMBReservoir().run_sequence([0, 0]).features[-1]
     assert np.linalg.norm(recurrent - static) > 1e-4

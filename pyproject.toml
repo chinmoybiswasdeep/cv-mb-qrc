@@ -27,12 +27,27 @@ dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.9", "mypy>=1.13", "build>=1.2"]
 packages = ["src/cv_mb_qrc"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["/.git", "/.venv", "/site", "/dist", "/experiments/measurement_based_reservoir/results/build", "/experiments/measurement_based_reservoir/results/site"]
+exclude = [
+  "/.git",
+  "/.venv*",
+  "/site",
+  "/dist",
+  "/dist-smoke",
+  "/experiments/measurement_based_reservoir/results_legacy",
+  "/experiments/measurement_based_reservoir/results_ci",
+  "/experiments/measurement_based_reservoir/results_development",
+  "/experiments/measurement_based_reservoir/results_publication",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
+markers = [
+  "graphix: tests requiring the optional Graphix backend",
+  "mentpy: tests requiring the Graphix-MentPy common subset",
+  "fock: slower non-Gaussian Fock-backend tests",
+]
 
 [tool.ruff]
 line-length = 100

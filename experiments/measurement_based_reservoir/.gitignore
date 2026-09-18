@@ -1,2 +1,6 @@
-results/build/
-results/site/
+results_ci/*
+results_development/*
+results_publication/*
+!results_ci/.gitkeep
+!results_development/.gitkeep
+!results_publication/.gitkeep

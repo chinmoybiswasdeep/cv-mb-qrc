@@ -7,7 +7,8 @@ import numpy as np
 import photographiq as pg
 
 from .base import MeasurementBasedReservoir, input_vector
-from .config import BackendCapabilityError, CVConfig, integer
+from .config import CVConfig, integer
+from .gaussian_readout import StateOracleReadout, TapHomodyneReadout
 from .results import ReservoirResult
 
 
@@ -17,12 +18,12 @@ class CVMBReservoir(MeasurementBasedReservoir):
     def __init__(self, config: CVConfig | None = None):
         self.config = config or CVConfig()
         c = self.config
-        if c.readout_mode != "state_oracle":
-            raise BackendCapabilityError(
-                "Only StateOracleReadout is available. TapHomodyneReadout requires a verified "
-                "public PhotoGraphiQ beam-splitter measurement channel; physical_probe is refused."
-            )
         self.nodes = tuple(range(c.memory_modes))
+        self.readout = (
+            StateOracleReadout(c, self.nodes)
+            if c.readout_mode == "state_oracle"
+            else TapHomodyneReadout(c, self.nodes)
+        )
         rng = np.random.default_rng(c.seed)
         self.mask = rng.uniform(-1, 1, (c.input_channels, c.input_channels))
         self.bias = rng.uniform(-0.2, 0.2, c.input_channels)
@@ -101,33 +102,10 @@ class CVMBReservoir(MeasurementBasedReservoir):
         presets. Photon number is excluded from quadratic diagnostics because
         it is exactly dependent on q² and p² under this convention.
         """
-        mean, cov = state.mean, state.covariance
-        diagonal = np.diag(cov)
-        preset = self.config.feature_preset
-        if preset == "tier_a":
-            return np.asarray(list(mean) + list(np.diag(cov)))
-        if preset == "tier_b":
-            return np.asarray(list(mean) + list(cov[np.triu_indices_from(cov)]))
-        quadratic = mean**2 + diagonal
-        if preset == "diagnostic_redundant":
-            return np.asarray(list(mean) + list(diagonal) + [state.photon_number(n) for n in self.nodes] + list(quadratic))
-        # Diagnostic raw second moments; n is deliberately omitted.
-        return np.asarray(list(mean) + list(diagonal) + list(quadratic))
+        return self.readout.measure(state)
 
     def feature_names(self):
-        preset = self.config.feature_preset
-        names = [f"mean_{axis}{n}" for n in self.nodes for axis in ("q", "p")]
-        if preset == "tier_a":
-            names += [f"var_{axis}{n}" for n in self.nodes for axis in ("q", "p")]
-            return tuple(names)
-        if preset == "tier_b":
-            names += [f"cov_{i}_{j}" for i, j in zip(*np.triu_indices(2 * len(self.nodes)), strict=True)]
-            return tuple(names)
-        names += [f"var_{axis}{n}" for n in self.nodes for axis in ("q", "p")]
-        if preset == "diagnostic_redundant":
-            names += [f"number_{n}" for n in self.nodes]
-        names += [f"square_{axis}{n}" for n in self.nodes for axis in ("q", "p")]
-        return tuple(names)
+        return self.readout.feature_names()
 
     def step(self, input_value, *, shots=None):
         value = input_vector(input_value, self.config.input_channels)
@@ -202,7 +180,7 @@ class CVMBReservoir(MeasurementBasedReservoir):
                 "tier": c.tier,
                 "gaussian": True,
                 "readout_mode": c.readout_mode,
-                "readout_label": "simulation-only upper-bound readout" if c.readout_mode == "state_oracle" else "finite physical-probe simulator estimate",
+                "readout_label": "simulation-only upper-bound readout",
                 "standard_error": standard_error,
                 "compilation_seconds": self.compilation_seconds,
             },
@@ -211,9 +189,6 @@ class CVMBReservoir(MeasurementBasedReservoir):
                 "retained_nodes": list(self.nodes),
                 "fresh_nodes": c.input_channels,
                 "measurements": c.input_channels,
-                "readout_replicas": c.n_replicas if c.readout_mode == "physical_probe" else 0,
-                "readout_shots_per_replica": c.n_readout_shots if c.readout_mode == "physical_probe" else 0,
-                "readout_measurements_total": c.n_replicas * c.n_readout_shots if c.readout_mode == "physical_probe" else 0,
                 "edges": int(np.count_nonzero(self.weights))
                 + (len(self.nodes) - 1 if c.coupling else 0),
                 "cutoff": None,

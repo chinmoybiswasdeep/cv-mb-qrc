@@ -46,10 +46,28 @@ does not average normalized postselected states equally. Adaptive homodyne angle
 are available within multi-input conditional steps and rejected by the exact
 unconditional configuration.
 
-Tier A extracts quadrature means and diagonal covariance. Tier B adds
-`<n>=(Vqq+Vpp+mu_q²+mu_p²-2)/4` and quadrature squares. Covariance is a centered
-moment statistic; it is not itself a fixed linear observable. This feature tier
-is Gaussian-simulable and supplies no evidence of non-Gaussian resources.
+Tier A extracts quadrature means and diagonal covariance. Tier B extracts those
+means and the complete upper-triangular covariance, including cross-mode entries.
+For two modes their dimensions are 8 and 14. Photon number and raw quadrature
+squares are not task-facing Tier B features. Both tiers are exactly
+Gaussian-simulable and supply no evidence of non-Gaussian resources.
+
+```python
+from cv_mb_qrc.reservoirs import GaussianClassicalTwin
+twin = GaussianClassicalTwin(config)
+np.testing.assert_allclose(
+    twin.run_sequence(u).features,
+    CVMBReservoir(config).run_sequence(u).features,
+    atol=3e-12,
+    rtol=0,
+)
+```
+
+The default readout is `state_oracle`, an exact simulation-only view of internal
+moments. `physical_probe` raises `BackendCapabilityError`: PhotoGraphiQ does not
+yet expose the audited tap-beamsplitter plus selected-quadrature homodyne
+instrument needed to model probe outcomes and surviving memory without jointly
+sampling incompatible quadratures.
 
 ```python
 from cv_mb_qrc.reservoirs import GraphixMBReservoir, QubitConfig
@@ -61,7 +79,8 @@ print(result.features)  # retained memory X/Y/Z expectations
 The initial Graphix architecture has one retained qubit and one fresh Ry input.
 After CZ, the ancilla is measured in XY, outcome one controls X on memory, and
 a fixed H rotates memory. The exact path sums the two unnormalized branches.
-This is a generic qubit channel, unrelated numerically to CV state simulation.
+This is a bounded one-memory-qubit collision reference, not a generic configurable
+MBQC reservoir. It is unrelated numerically to CV state simulation.
 The density matrix is checked for trace, Hermiticity and positivity each step.
 
 For ancilla amplitudes a=cos(theta/2), b=sin(theta/2), measurement angle phi,

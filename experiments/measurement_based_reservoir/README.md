@@ -1,116 +1,96 @@
-# Measurement-based reservoirs
+# Measurement-based reservoir experiments
 
-Run from the `cv-mb-qrc` repository root after installing the audited PhotoGraphiQ checkout:
+The V3 runner is manifest-driven and separates CI, development, publication and
+legacy outputs. Historical V2 artifacts are preserved under `results_legacy/`;
+they were generated with the former `photographiqml` namespace and are not V3
+evidence.
+
+Run the self-contained core smoke study with:
 
 ```sh
-python -m pip install -e ".[dev,docs,experiments,graphix]"
-python -m pip install -r tests/mentpy_reference/requirements.txt
-python experiments/measurement_based_reservoir/main.py --config experiments/measurement_based_reservoir/config_small.json
-python experiments/measurement_based_reservoir/reproduce.py
-python -m pytest tests/reservoirs
+python main.py --config config_ci.json --output /tmp/cv-mb-qrc-ci
+python verify_provenance.py /tmp/cv-mb-qrc-ci
 ```
 
-On Windows the existing interpreter is `.venv/Scripts/python.exe`. No pushes or
-remote writes are needed. `--output PATH` isolates a run. `--resume` accepts only
-the identical saved config and resumes completed manifest entries. Exceptions
-are saved with configuration and traceback and re-raised. Windows atomic writes
-retry transient file-sharing errors for a bounded interval.
+`config_ci.json` enables only CV Tier A, CV Tier B and the delay baseline. It
+does not import Graphix or MentPy and permits one dataset/reservoir seed without
+claiming a standard deviation or confidence interval. `config_small.json` is a
+non-publication development study. `config_publication.json` predeclares at least
+five dataset seeds, ten reservoir seeds, longer sequences, permutation nulls and
+the required baseline set; it is intentionally unexecuted.
 
-`config_small.json` uses ten reservoir seeds, 360 samples per locally generated
-dataset, chronological 60/20/20 boundaries, a five-sample embargo and 20-sample
-independent washout. This is a smoke study, not a publication-scale capacity
-estimate: only 47 or 46 test examples remain per split. `config_full.json`
-increases samples, seeds, delays and the physical transmission sweep. Full scale
-execution is explicitly separate; do not label the small results publication-grade.
+## Features and models
 
-The dataset seed is shared across methods and reservoir seeds. Thus uncertainty
-is across reservoir initialization conditional on these datasets, not uncertainty
-over all possible time series. Mean, sample SD, median, individual seed values and
-95% percentile bootstrap intervals (2,000 draws, seed zero) are saved. No
-significance test or advantage claim is made.
+Tier A is first moments plus diagonal covariance: 8 features for two memory
+modes. Tier B is first moments plus the full upper covariance triangle: 14
+features for two modes. Diagnostic second-moment presets are separate and are
+not headline task features.
 
-## Models and input ownership
+`GaussianClassicalTwin` identifies the fixed PhotoGraphiQ Gaussian channel once,
+then advances `mu'=A mu+B u+c` and `V'=A V A.T+N` using NumPy. It uses the same
+mask, bias, features, chronological partitions and ridge selection as the CV
+reservoir. Agreement is evidence of efficient classical reproducibility, not
+quantum advantage.
 
-CV A/B use complete persistent Gaussian memory states and fixed seeded couplings.
-Graphix uses a one-memory/one-ancilla collision graph with probability-weighted
-outcome branches. WindowedMBQELM replays an explicit trailing window on a fresh
-resource. It is not recurrent. Classical delay/RFF baselines receive the same
-explicit window. ESN and input-only controls have 3 and 14 features, matching
-Graphix and CV Tier B respectively. Tier A has 8. The delay model has `window`
-features. These are disclosed feature comparisons, not equal physical budgets.
-All readouts also receive the current input and an unpenalized intercept.
+The Graphix implementation remains a one-memory-qubit collision reference. It
+is not presented as a generic topology-configurable MBQC reservoir. MentPy
+validates only the corrected pure-wire common subset and never CV physics or a
+general mixed-state Graphix channel.
 
-All quantum reservoir parameters stay fixed. Training fits the readout's means,
-standard deviations and ridge weights on train only. Validation selects from the
-declared ridge grid. Test is evaluated after selection. Every split resets state,
-rebuilds lag targets inside its own boundaries and applies washout; no overlap
-crosses a boundary. Changing seeds to improve test scores is prohibited.
+## Statistical protocol
 
-Controls include zero CV coupling, no temporal state transfer, disabled CV
-feed-forward, fixed measurement angles, Gaussian Tier A, windowed CV, a Graphix
-no-entanglement control, linear delayed-input ridge, RFF, ESN, input-only tanh and
-the Mackey–Glass persistence predictor. Removing feed-forward is not removing
-the destructive measurement. A measurement-disabled reservoir is not asserted.
+The hierarchy is dataset seed, reservoir seed, task, then method. Filenames and
+records preserve both seed roles. Mackey–Glass datasets vary their initial
+history by dataset seed. Teacher-forced targets are `x[t+h]` for configured
+horizons and use only information through `t`. The chronological embargo must
+cover both maximum history and maximum horizon. The selected horizon-one model
+also runs a recursive closed-loop rollout from observed context; each raw record
+stores NRMSE, normalized error by rollout time, valid-prediction time and a
+divergence flag.
 
-## Equations and metrics
+Readout input access is explicit: `reservoir_only` excludes the raw-input skip;
+`reservoir_plus_input` includes it. Train-only standardization and collapsed
+column filtering precede validation-only ridge selection. Test targets are
+evaluated once after selection.
 
-For iid `u ~ Uniform[-1,1]`, linear targets are `sqrt(3) u[t-k]`, quadratic self
-targets `sqrt(5)(3u[t-k]^2-1)/2` and cross targets `3u[t-a]u[t-b]` for distinct
-positive delays. These are orthonormal under the input distribution. Raw test R²
-is retained; reported total capacities sum `max(0,R²)`. This finite-sample clipping
-has positive bias and no theoretical bound is invoked.
+Capacity targets use orthogonal linear, quadratic-self and cross-delay
+polynomials. The primary statistic is permutation-null-corrected signed capacity.
+Each null repetition circularly shifts targets within each split and repeats the
+training/validation selection path. The clipped positive total is retained only
+as `legacy_clipped_capacity`.
 
-Temporal parity is the product of three delayed input signs. Regression outputs
-are thresholded at zero for accuracy. NARMA10 uses `v=(u+1)/4` and
-`y[t+1]=.3y[t]+.05y[t]sum(y[t-9:t+1])+1.5v[t-9]v[t]+.1`, with zero initial history.
-The first ten steps are initialization and are covered by washout.
+Scientific confidence intervals use a hierarchical bootstrap: dataset seeds are
+sampled first, followed by reservoir seeds within each sampled dataset. The CI
+smoke study has one observation and therefore records no standard deviation or
+confidence interval.
 
-Mackey–Glass uses `dx/dt=.2x(t-17)/(1+x(t-17)^10)-.1x(t)`, constant history 1.2,
-forward Euler step .1, unit-time sampling, and 1,000 unit-time burn-in samples.
-The target is the next sample. This is a specified numerical dataset, not an exact
-delay-equation solution; integration-step convergence is not claimed.
+## Readout and optional stages
 
-`NMSE=MSE/Var(test target)`, `NRMSE=sqrt(NMSE)`, `R²=1-NMSE`. Constant targets and
-nonfinite values raise errors. Figures plot raw R² or explicitly clipped capacity.
-Timing includes feature generation, model construction and readout selection;
-per-step compilation metadata is separate. Process RSS is sampled between runs,
-including interpreter/import memory and possibly missing short allocation peaks.
+Only `state_oracle` readout is implemented. It is explicitly labelled a
+simulation-only upper-bound readout. `physical_probe` constructs
+`TapHomodyneReadout`, which raises `BackendCapabilityError` because the audited
+public PhotoGraphiQ API does not yet provide the required tap beamsplitter,
+selected-quadrature homodyne instrument and surviving-memory channel. No joint
+q/p Gaussian sampling is substituted.
 
-## Exact, conditional and sampled semantics
+Stages are controlled by `enabled_stages`: core experiments, dynamics, shot,
+washout and scaling studies, Graphix diagnostics, MentPy validation, Fock
+control and report generation.
+Optional modules are imported only inside their enabled stages. The report reads
+available methods and tasks from the completed manifest and records why optional
+panels were skipped.
 
-The CV exact path uses PhotoGraphiQ's unconditional Gaussian channel analyzer.
-Selecting `backend='piquasso'` selects physical gates for **trajectory execution**;
-it does not relabel the exact analyzer as Piquasso. Graphix exact execution
-enumerates two branches and weights them by actual probability. Conditional
-execution retains one sampled branch and carries that branch to the next step.
+## Provenance
 
-`shots=N` means N independently persistent measurement trajectories. Features are
-exact conditional-state expectations within trajectories; the average estimates
-the unconditional expectation. Gaussian covariance estimates additionally include
-between-trajectory means. This is a Monte Carlo trajectory budget, **not** a full
-experimental detector-shot budget for reading every output observable. Features
-are simulated nondestructively; experimental tomography/readout replication costs
-are not included. No exact results silently replace a requested trajectory run.
+Every run records resolved configuration and hash, repository and PhotoGraphiQ
+commits/dirty status, implementation hashes, dataset hashes, split hash, seed
+roles, dependency versions, exact command, timestamps, expected/completed/failure
+manifests and report status. `verify_provenance.py` reports exact mismatches.
+Publication validity additionally requires publication study class, clean source
+worktrees, exact summary hashes, all required methods and seeds, complete null
+repetitions and completed report generation. Every raw JSON file is rejected if
+it contains NaN or Infinity.
 
-Gaussian number and quadrature-square features are Tier B and efficiently
-Gaussian-simulable. The optional `reservoirs.fock` module uses an even-cat ancilla,
-mixed-Fock state transfer, CZ, PNR and loss. `cutoff_study` selects the same zero-PNR
-branch at each predeclared exclusive total-photon cutoff, includes its success
-and complement probability, and checks selected observables. This is a numerical
-control, not a non-Gaussian task comparison or whole-state convergence certificate.
-
-MentPy is a corrected pure-wire reference only. Node/bit order, radians versus
-Graphix units of pi, zero-branch convention and global phase are resolved. It
-does not validate arbitrary mixed collision channels or CV numerical physics.
-
-## Results and regeneration
-
-`results/raw` holds datasets, split indices, environment, configuration, per-method
-per-seed features/targets/predictions, validation-selected regularization and
-resource counts. `manifest.json` defines completed task runs. The reproducer
-reads only raw data, then writes CSV, JSON summaries, Markdown tables and SVG/PDF/PNG
-figures. It never embeds scores. Do not delete failure records when retrying.
-
-The design audit is in
-`docs/research/measurement_based_quantum_reservoir_design.md`; the executable
-tutorial notebook is `notebooks/06_measurement_based_quantum_reservoir.ipynb`.
+The Fock cutoff path remains an explicitly postselected numerical control. Its
+success and failure probabilities must be reported; it is not a deterministic
+reservoir or evidence of non-Gaussian advantage.

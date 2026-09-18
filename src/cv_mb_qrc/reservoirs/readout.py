@@ -4,23 +4,27 @@ import numpy as np
 
 
 class RidgeReadout:
-    def __init__(self, regularization=1e-4, *, variance_floor=1e-12):
+    def __init__(
+        self, regularization=1e-4, *, variance_floor=1e-12, input_access="reservoir_plus_input"
+    ):
         if not np.isfinite(regularization) or regularization <= 0:
             raise ValueError("Ridge regularization must be finite and positive")
         self.regularization = regularization
         if not np.isfinite(variance_floor) or variance_floor < 0:
             raise ValueError("variance_floor must be finite and nonnegative")
         self.variance_floor = variance_floor
+        if input_access not in ("reservoir_only", "reservoir_plus_input"):
+            raise ValueError("input_access must be reservoir_only or reservoir_plus_input")
+        self.input_access = input_access
         self.weights = None
 
-    @staticmethod
-    def design(inputs, features):
+    def design(self, inputs, features):
         u, x = np.asarray(inputs, float), np.asarray(features, float)
         if u.ndim == 1:
             u = u[:, None]
         if u.ndim != 2 or x.ndim != 2 or len(u) != len(x):
             raise ValueError("Inputs/features must have matching sample axes")
-        result = np.column_stack([u, x])
+        result = np.column_stack([u, x]) if self.input_access == "reservoir_plus_input" else x
         if not len(result) or not np.isfinite(result).all():
             raise ValueError("Design must be nonempty and finite")
         return result

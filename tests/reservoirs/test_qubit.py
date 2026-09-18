@@ -3,11 +3,12 @@ from itertools import product
 import numpy as np
 import pytest
 
-pytest.importorskip("graphix")
-
 from cv_mb_qrc.reservoirs import GraphixMBReservoir, QubitConfig
 from cv_mb_qrc.reservoirs.graphix_backend import graphix_wire
 from cv_mb_qrc.reservoirs.validation import collision_kraus
+
+pytest.importorskip("graphix")
+pytestmark = pytest.mark.graphix
 
 
 @pytest.mark.parametrize("entangle,feedforward", list(product([False, True], repeat=2)))
@@ -46,6 +47,7 @@ def test_wire_all_branches_and_identity():
         )
 
 
+@pytest.mark.mentpy
 def test_mentpy_common_subset():
     pytest.importorskip("mentpy")
     from cv_mb_qrc.reservoirs.mentpy_backend import compare_wire

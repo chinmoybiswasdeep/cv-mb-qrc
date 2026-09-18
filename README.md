@@ -19,6 +19,11 @@ The two temporal models are explicit:
 The default experiments train only a regularized classical readout. Reservoir
 parameters stay fixed after seeded initialization.
 
+CV Tier A contains first moments plus diagonal covariance (8 features for two
+modes). Tier B contains first moments plus the complete upper covariance triangle
+(14 features for two modes). The exact `GaussianClassicalTwin` is a mandatory
+affine state-space baseline for supported fixed Gaussian channels.
+
 ## Install
 
 Install the audited PhotoGraphiQ checkout, then this repository:
@@ -59,14 +64,19 @@ python -m ruff check src tests experiments
 python -m ruff format --check src tests experiments
 python -m mypy
 python -m build
-python experiments/measurement_based_reservoir/main.py
-python experiments/measurement_based_reservoir/reproduce.py
+python experiments/measurement_based_reservoir/main.py \
+  --config experiments/measurement_based_reservoir/config_ci.json \
+  --output /tmp/cv-mb-qrc-ci
+python experiments/measurement_based_reservoir/verify_provenance.py /tmp/cv-mb-qrc-ci
 ```
 
-The committed smoke-study artifacts contain 420 raw method/seed/task runs and 17
-figures in SVG, PDF and PNG. The deterministic score records reproduced exactly.
-These small results do not establish quantum advantage, a memory–nonlinearity
-tradeoff violation, non-Gaussian task superiority or edge-of-chaos behavior.
+Historical outputs created under the old `photographiqml` namespace live only in
+`experiments/measurement_based_reservoir/results_legacy/`. They do not validate
+V3. New CI, development and publication outputs are isolated in `results_ci/`,
+`results_development/` and `results_publication/`. Physical tap-homodyne readout
+is currently unsupported and fails explicitly; only simulation-only state-oracle
+readout is available. No present result establishes quantum advantage,
+non-Gaussian superiority or edge-of-chaos behavior.
 
 Read the [design audit](docs/research/measurement_based_quantum_reservoir_design.md),
 [tutorial](docs/tutorials/measurement-based-reservoir.md), [experiment protocol](experiments/measurement_based_reservoir/README.md),

@@ -70,10 +70,23 @@ def fading_memory(factory, inputs, *, perturbation=0.01, at=0):
     }
 
 
-def bootstrap_summary(values, *, seed=0, draws=2000):
+def bootstrap_summary(values, *, seed=0, draws=2000, scientific=True):
     a = np.asarray(values, float)
-    if a.ndim != 1 or len(a) < 2 or not np.isfinite(a).all():
-        raise ValueError("Need at least two finite independent seed results")
+    if a.ndim != 1 or not len(a) or not np.isfinite(a).all():
+        raise ValueError("Need finite independent observations")
+    if len(a) == 1:
+        if scientific:
+            raise ValueError("Scientific uncertainty needs at least two independent observations")
+        value = float(a[0])
+        return {
+            "mean": value,
+            "std": None,
+            "median": value,
+            "bootstrap95": None,
+            "values": [value],
+            "bootstrap_seed": seed,
+            "scientific_uncertainty_valid": False,
+        }
     rng = np.random.default_rng(seed)
     means = rng.choice(a, (draws, len(a)), replace=True).mean(axis=1)
     return {
@@ -83,4 +96,54 @@ def bootstrap_summary(values, *, seed=0, draws=2000):
         "bootstrap95": np.quantile(means, [0.025, 0.975]).tolist(),
         "values": a.tolist(),
         "bootstrap_seed": seed,
+        "scientific_uncertainty_valid": True,
+    }
+
+
+def hierarchical_bootstrap_summary(
+    values,
+    dataset_seeds,
+    reservoir_seeds,
+    *,
+    seed=0,
+    draws=2000,
+    scientific=True,
+):
+    """Bootstrap dataset seeds, then reservoir observations within each dataset."""
+    a = np.asarray(values, float)
+    datasets = np.asarray(dataset_seeds)
+    reservoirs = np.asarray(reservoir_seeds)
+    if (
+        a.ndim != 1
+        or not len(a)
+        or datasets.shape != a.shape
+        or reservoirs.shape != a.shape
+        or not np.isfinite(a).all()
+    ):
+        raise ValueError("Need aligned finite values and seed roles")
+    unique_datasets = np.unique(datasets)
+    if len(unique_datasets) < 2:
+        if scientific:
+            raise ValueError("Hierarchical scientific uncertainty needs at least two datasets")
+        result = bootstrap_summary(a, seed=seed, draws=draws, scientific=False)
+        result["scientific_uncertainty_valid"] = False
+        return result
+    rng = np.random.default_rng(seed)
+    means = np.empty(draws)
+    groups = {key: a[datasets == key] for key in unique_datasets}
+    for draw in range(draws):
+        selected = rng.choice(unique_datasets, len(unique_datasets), replace=True)
+        nested = [rng.choice(groups[key], len(groups[key]), replace=True) for key in selected]
+        means[draw] = np.concatenate(nested).mean()
+    return {
+        "mean": float(a.mean()),
+        "std": float(a.std(ddof=1)),
+        "median": float(np.median(a)),
+        "bootstrap95": np.quantile(means, [0.025, 0.975]).tolist(),
+        "values": a.tolist(),
+        "dataset_seeds": datasets.tolist(),
+        "reservoir_seeds": reservoirs.tolist(),
+        "bootstrap_seed": seed,
+        "bootstrap_method": "dataset_then_reservoir_within_dataset",
+        "scientific_uncertainty_valid": True,
     }

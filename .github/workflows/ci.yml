@@ -1,7 +1,9 @@
 name: CI
+
 on: [push, pull_request]
+
 jobs:
-  test:
+  core:
     strategy:
       fail-fast: false
       matrix:
@@ -9,13 +11,68 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: chinmoybiswasdeep/PhotoGraphiQ
+          ref: manuscript-experiments
+          path: _upstream/PhotoGraphiQ
       - uses: actions/setup-python@v5
-        with: {python-version: ${{ matrix.python }}}
+        with: {python-version: '${{ matrix.python }}'}
       - run: python -m pip install -U pip
+      - run: python -m pip install ./_upstream/PhotoGraphiQ
       - run: python -m pip install '.[dev,experiments]'
-      - run: python -m pytest --cov=src/cv_mb_qrc
+      - run: python -m pytest tests/reservoirs -m "not graphix and not mentpy and not fock"
       - run: python -m ruff check src tests experiments
       - run: python -m ruff format --check src tests experiments
       - run: python -m mypy
       - run: python -m build
-      - run: python experiments/measurement_based_reservoir/main.py --config experiments/measurement_based_reservoir/config_ci.json
+      - run: python -m venv wheel-env
+      - run: wheel-env/bin/python -m pip install dist/*.whl
+      - run: wheel-env/bin/python -c "import sys, cv_mb_qrc; assert 'graphix' not in sys.modules; assert 'mentpy' not in sys.modules"
+
+  graphix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: chinmoybiswasdeep/PhotoGraphiQ
+          ref: manuscript-experiments
+          path: _upstream/PhotoGraphiQ
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install ./_upstream/PhotoGraphiQ
+      - run: python -m pip install '.[dev,graphix]'
+      - run: python -m pytest tests/reservoirs -m graphix
+
+  mentpy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: chinmoybiswasdeep/PhotoGraphiQ
+          ref: manuscript-experiments
+          path: _upstream/PhotoGraphiQ
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install ./_upstream/PhotoGraphiQ
+      - run: python -m pip install '.[dev,graphix,validation]'
+      - run: python -m pytest tests/reservoirs -m mentpy
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: chinmoybiswasdeep/PhotoGraphiQ
+          ref: manuscript-experiments
+          path: _upstream/PhotoGraphiQ
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install ./_upstream/PhotoGraphiQ
+      - run: python -m pip install '.[dev,experiments]'
+      - run: python experiments/measurement_based_reservoir/main.py --config experiments/measurement_based_reservoir/config_ci.json --output "${RUNNER_TEMP}/cv-mb-qrc-smoke"
+      - run: python experiments/measurement_based_reservoir/verify_provenance.py "${RUNNER_TEMP}/cv-mb-qrc-smoke"
+      - run: python -c "import json, os, pathlib, sys; p=pathlib.Path(os.environ['RUNNER_TEMP'])/'cv-mb-qrc-smoke'/'raw'; assert json.loads((p/'manifest.json').read_text()); assert 'graphix' not in sys.modules; assert 'mentpy' not in sys.modules"

@@ -1,1 +1,22 @@
-﻿{"seeds":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19],"length":4000,"washout":100,"gap":21,"delays":15,"window":20,"dataset_seed":1729,"regularizations":[0.000001,0.0001,0.01,1.0,100.0],"transmissivities":[0.2,0.4,0.6,0.8,0.9,0.95,0.99],"noise_strengths":[0.0,0.05,0.1,0.2],"shot_counts":[32,128,512],"run_fock":true}
+{
+  "study_class": "development",
+  "reservoir_seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "dataset_seeds": [1729, 1730, 1731],
+  "length": 4000,
+  "washout": 100,
+  "gap": 50,
+  "delays": 15,
+  "window": 20,
+  "forecast_horizons": [1, 5, 10, 20, 50],
+  "regularizations": [0.000001, 0.0001, 0.01, 1.0, 100.0],
+  "transmissivities": [0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99],
+  "noise_strengths": [0.0, 0.05, 0.1, 0.2],
+  "shot_counts": [32, 128, 512],
+  "null_permutations": 100,
+  "permutation_seed": 2718,
+  "bootstrap_seed": 31415,
+  "input_access": "reservoir_only",
+  "enabled_methods": ["cv_A", "cv_B", "gaussian_classical_twin_A", "gaussian_classical_twin_B", "delay", "rff", "esn", "input_only", "persistence", "cv_window", "cv_no_temporal", "cv_zero_coupling", "cv_no_feedforward"],
+  "enabled_stages": ["core", "dynamics", "shots", "fock", "report"],
+  "purpose": "Broad development study; not publication-valid"
+}

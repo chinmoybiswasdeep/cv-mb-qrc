@@ -35,9 +35,6 @@ class CVConfig:
     tier: str = "B"
     feature_preset: str | None = None
     readout_mode: str = "state_oracle"
-    n_replicas: int = 1
-    n_readout_shots: int = 1
-    probe_strength: float = 0.05
     variance_floor: float = 1e-12
     evolution: str = "unconditional"
     backend: str = "gaussian"
@@ -46,7 +43,12 @@ class CVConfig:
     max_trajectories: int = 10000
 
     def __post_init__(self):
-        for name in ("memory_modes", "input_channels", "max_modes", "max_trajectories", "n_replicas", "n_readout_shots"):
+        for name in (
+            "memory_modes",
+            "input_channels",
+            "max_modes",
+            "max_trajectories",
+        ):
             integer(getattr(self, name), name)
         integer(self.seed, "seed", 0)
         for name in (
@@ -74,16 +76,15 @@ class CVConfig:
             raise BackendCapabilityError("Gaussian CV reservoir supports Tier A/B only")
         canonical = {"A": "tier_a", "B": "tier_b"}
         diagnostic = {"diagnostic_quadratic", "diagnostic_redundant"}
-        preset = canonical[self.tier] if self.feature_preset is None else self.feature_preset
+        preset = self.resolved_feature_preset
         if preset not in set(canonical.values()) | diagnostic:
             raise ValueError("Unknown CV feature preset")
         if preset in canonical.values() and preset != canonical[self.tier]:
             raise ValueError("tier and feature_preset disagree; use a diagnostic preset explicitly")
-        object.__setattr__(self, "feature_preset", preset)
         if self.readout_mode not in ("state_oracle", "physical_probe"):
             raise ValueError("readout_mode must be state_oracle or physical_probe")
-        if not 0 < self.probe_strength <= 1 or self.variance_floor < 0:
-            raise ValueError("Invalid probe strength or variance floor")
+        if self.variance_floor < 0:
+            raise ValueError("Invalid variance floor")
         if self.backend not in ("gaussian", "piquasso"):
             raise BackendCapabilityError("Select gaussian or piquasso; no implicit Fock fallback")
         if self.evolution not in ("unconditional", "conditional"):
@@ -94,6 +95,18 @@ class CVConfig:
             raise ValueError("temporal_edges must be boolean")
         if self.memory_modes + self.input_channels > self.max_modes:
             raise MemoryError("Live modes exceed max_modes; explicitly raise the guard to override")
+
+    @property
+    def resolved_feature_preset(self) -> str:
+        """Return the effective preset without mutating the requested configuration.
+
+        Keeping ``None`` intact is important: ``dataclasses.replace(config,
+        tier="A")`` can then safely derive Tier A instead of retaining a
+        previously materialized Tier B preset.
+        """
+        if self.feature_preset is not None:
+            return self.feature_preset
+        return {"A": "tier_a", "B": "tier_b"}[self.tier]
 
 
 @dataclass(frozen=True)
