@@ -10,6 +10,7 @@ from time import perf_counter
 
 import numpy as np
 import photographiq as pg
+import psutil
 
 from .base import MeasurementBasedReservoir, input_vector
 from .config import BackendCapabilityError, integer
@@ -155,6 +156,7 @@ def cutoff_study(inputs, *, cutoffs=(8, 12, 16), seed=0, tolerance=1e-5):
         raise ValueError("Positive finite convergence tolerance required")
     rows, previous = [], None
     for cutoff in cutoffs:
+        rss_before = psutil.Process().memory_info().rss
         model = FockMBReservoir(replace(FockConfig(), cutoff=cutoff, seed=seed))
         results = [model.step(u, postselect=0) for u in inputs]
         features = np.array([r.features for r in results])
@@ -166,9 +168,20 @@ def cutoff_study(inputs, *, cutoffs=(8, 12, 16), seed=0, tolerance=1e-5):
                 "features": features.tolist(),
                 "joint_success_probability": probability,
                 "failure_probability": 1 - probability,
+                "effective_trajectories_per_accepted_sequence": (
+                    float(1 / probability) if probability > 0 else None
+                ),
                 "max_feature_change": difference,
                 "diagnostics": [r.diagnostics for r in results],
                 "seconds": sum(r.seconds for r in results),
+                "sampled_process_rss_increase_bytes": max(
+                    0, psutil.Process().memory_info().rss - rss_before
+                ),
+                "maximum_boundary_population": max(
+                    diagnostic["boundary_population"]
+                    for result in results
+                    for diagnostic in [result.diagnostics]
+                ),
             }
         )
         previous = features
@@ -176,5 +189,9 @@ def cutoff_study(inputs, *, cutoffs=(8, 12, 16), seed=0, tolerance=1e-5):
         "rows": rows,
         "tolerance": tolerance,
         "observable_convergence": rows[-1]["max_feature_change"] < tolerance,
-        "scope": "fixed zero-PNR branch, selected observables only; not full-state convergence",
+        "truncation_warning": any(row["maximum_boundary_population"] > tolerance for row in rows),
+        "scope": (
+            "numerical feasibility study of a fixed zero-PNR branch and selected observables; "
+            "not full-state convergence or task-level advantage"
+        ),
     }

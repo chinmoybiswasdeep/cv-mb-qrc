@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from cv_mb_qrc.reservoirs import GraphixMBReservoir, QubitConfig
-from cv_mb_qrc.reservoirs.graphix_backend import graphix_wire
+from cv_mb_qrc.reservoirs.graphix_backend import build_guarded_topology, graphix_wire
 from cv_mb_qrc.reservoirs.validation import collision_kraus
 
 pytest.importorskip("graphix")
@@ -76,3 +76,13 @@ def test_qubit_shots_statistical():
     )
     se = samples.std(axis=0, ddof=1) / np.sqrt(len(samples))
     assert np.all(abs(samples.mean(axis=0) - exact) <= 6 * se + 1e-12)
+
+
+@pytest.mark.parametrize("kind", ["chain", "ring", "star", "brickwork"])
+def test_guarded_topology_designs_are_valid_but_not_claimed_executable(kind):
+    topology = build_guarded_topology(2, 2, kind=kind)
+    assert topology["memory_nodes"] == topology["retained_nodes"] == [0, 1]
+    assert topology["fresh_nodes"] == topology["measured_nodes"] == [2, 3]
+    assert topology["execution_status"].startswith("design-only")
+    with pytest.raises(MemoryError):
+        build_guarded_topology(8, 1, max_live_qubits=8)

@@ -8,15 +8,22 @@ features and ridge training. Graphix and MentPy imports are optional.
 import numpy as np
 from cv_mb_qrc.reservoirs import CVConfig, CVMBReservoir, RidgeReadout
 
-config = CVConfig(seed=7, memory_modes=2, squeezing=.3, coupling=.2,
-                  transmissivity=.8, evolution="unconditional", tier="B")
+config = CVConfig(
+    seed=7,
+    memory_modes=2,
+    squeezing=0.3,
+    coupling=0.2,
+    transmissivity=0.8,
+    evolution="unconditional",
+    tier="B",
+)
 u = np.random.default_rng(1729).uniform(-1, 1, 180)
 train_u, test_u = u[:120], u[125:]
 train = CVMBReservoir(config).run_sequence(train_u, washout=20)
 test = CVMBReservoir(config).run_sequence(test_u, washout=20)
 # Example target: one-step delayed nonlinear signal; each split owns its history.
-train_y = train_u[19:-1]**2
-test_y = test_u[19:-1]**2
+train_y = train_u[19:-1] ** 2
+test_y = test_u[19:-1] ** 2
 readout = RidgeReadout(1e-4).fit(train_u[20:], train.features, train_y)
 prediction = readout.predict(test_u[20:], test.features)
 assert prediction.shape == test_y.shape
@@ -54,6 +61,7 @@ Gaussian-simulable and supply no evidence of non-Gaussian resources.
 
 ```python
 from cv_mb_qrc.reservoirs import GaussianClassicalTwin
+
 twin = GaussianClassicalTwin(config)
 np.testing.assert_allclose(
     twin.run_sequence(u).features,
@@ -71,8 +79,9 @@ sampling incompatible quadratures.
 
 ```python
 from cv_mb_qrc.reservoirs import GraphixMBReservoir, QubitConfig
+
 qubit = GraphixMBReservoir(QubitConfig(seed=7))
-result = qubit.run_sequence([.1, .2, -.1])
+result = qubit.run_sequence([0.1, 0.2, -0.1])
 print(result.features)  # retained memory X/Y/Z expectations
 ```
 

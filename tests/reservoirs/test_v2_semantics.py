@@ -62,6 +62,44 @@ def test_physical_readout_is_not_silently_approximated():
         CVMBReservoir(CVConfig(readout_mode="physical_probe"))
 
 
+def test_physical_measurement_budget_is_explicit_and_conservative():
+    from cv_mb_qrc.reservoirs.gaussian_readout import StateOracleReadout, measurement_budget
+
+    tier_a = measurement_budget(2, "A", shots_per_setting=100)
+    tier_b = measurement_budget(2, "B", shots_per_setting=100)
+    assert tier_a["simulator_feature_count"] == 8
+    assert tier_a["state_copies"] == 400
+    assert tier_b["simulator_feature_count"] == 14
+    assert tier_b["state_copies"] == 1000
+    assert "roadmap-only" in tier_b["status"]
+    with pytest.raises(ValueError):
+        measurement_budget(0, "A")
+    with pytest.raises(ValueError):
+        measurement_budget(1, "C")
+    with pytest.raises(ValueError):
+        measurement_budget(1, "A", shots_per_setting=0)
+
+    class State:
+        mean = np.array([0.2, -0.1])
+        covariance = np.eye(2)
+
+        @staticmethod
+        def photon_number(_node):
+            return 0.25
+
+    readout = StateOracleReadout(CVConfig(feature_preset="diagnostic_redundant"), (0,))
+    assert readout.feature_names() == (
+        "mean_q0",
+        "mean_p0",
+        "var_q0",
+        "var_p0",
+        "number_0",
+        "square_q0",
+        "square_p0",
+    )
+    np.testing.assert_allclose(readout.measure(State()), [0.2, -0.1, 1, 1, 0.25, 1.04, 1.01])
+
+
 def test_direct_input_access_is_explicit():
     inputs = np.linspace(-1, 1, 20)
     features = (inputs**2)[:, None]

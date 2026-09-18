@@ -58,3 +58,63 @@ class RidgeReadout:
         if x.shape[1] != len(self.kept_columns):
             raise ValueError("Feature dimension differs from training")
         return (x[:, self.kept_columns] - self.mean) / self.scale @ self.weights + self.target_mean
+
+
+class MultiTargetRidgeReadout(RidgeReadout):
+    """Per-target validation selection sharing one training design SVD."""
+
+    def __init__(self, regularizations, **kwargs):
+        regularizations = np.asarray(tuple(regularizations), float)
+        if (
+            regularizations.ndim != 1
+            or not len(regularizations)
+            or not np.isfinite(regularizations).all()
+            or np.any(regularizations <= 0)
+        ):
+            raise ValueError("Regularizations must be finite and positive")
+        super().__init__(float(regularizations[0]), **kwargs)
+        self.regularizations = regularizations
+        self.factorization_count = 0
+
+    def fit_with_validation(self, train, validation):
+        train_inputs, train_features, train_targets = train
+        validation_inputs, validation_features, validation_targets = validation
+        x = self.design(train_inputs, train_features)
+        validation_x = self.design(validation_inputs, validation_features)
+        y = np.asarray(train_targets, float)
+        validation_y = np.asarray(validation_targets, float)
+        if y.ndim == 1:
+            y = y[:, None]
+        if validation_y.ndim == 1:
+            validation_y = validation_y[:, None]
+        if len(y) != len(x) or validation_y.shape[1] != y.shape[1]:
+            raise ValueError("Multi-target train/validation targets are not aligned")
+        self.mean = x.mean(axis=0)
+        self.scale = x.std(axis=0)
+        self.kept_columns = self.scale >= self.variance_floor
+        self.removed_columns = np.flatnonzero(~self.kept_columns).tolist()
+        if not np.any(self.kept_columns):
+            raise ValueError("All readout columns collapsed on the training partition")
+        self.mean, self.scale = self.mean[self.kept_columns], self.scale[self.kept_columns]
+        self.scale[self.scale == 0] = 1
+        z = (x[:, self.kept_columns] - self.mean) / self.scale
+        validation_z = (validation_x[:, self.kept_columns] - self.mean) / self.scale
+        self.target_mean = y.mean(axis=0)
+        centered_targets = y - self.target_mean
+        u, singular_values, vh = np.linalg.svd(z, full_matrices=False)
+        self.factorization_count += 1
+        projected_targets = u.T @ centered_targets
+        candidates, losses = [], []
+        for alpha in self.regularizations:
+            multiplier = singular_values / (singular_values**2 + alpha)
+            weights = (vh.T * multiplier) @ projected_targets
+            candidates.append(weights)
+            prediction = validation_z @ weights + self.target_mean
+            losses.append(np.mean((prediction - validation_y) ** 2, axis=0))
+        loss_matrix = np.asarray(losses)
+        selected = np.argmin(loss_matrix, axis=0)
+        self.selected_regularizations = self.regularizations[selected]
+        self.weights = np.column_stack(
+            [candidates[index][:, target] for target, index in enumerate(selected)]
+        )
+        return self

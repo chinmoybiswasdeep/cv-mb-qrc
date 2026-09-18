@@ -46,9 +46,7 @@ inputs = np.random.default_rng(1729).uniform(-1, 1, 200)
 reservoir = CVMBReservoir(CVConfig(seed=7, memory_modes=2, tier="B"))
 features = reservoir.run_sequence(inputs, washout=20)
 
-readout = RidgeReadout(1e-4).fit(
-    inputs[20:], features.features, np.roll(inputs, 1)[20:]
-)
+readout = RidgeReadout(1e-4).fit(inputs[20:], features.features, np.roll(inputs, 1)[20:])
 prediction = readout.predict(inputs[20:], features.features)
 ```
 
@@ -56,18 +54,21 @@ Angles are radians. CV conventions are `[q,p]=2i`, interleaved quadratures,
 vacuum statistical covariance `I`, and positive resource squeezing means momentum
 squeezing.
 
-## Reproduce
+## Reproduce the paper
 
 ```sh
-python -m pytest --cov=src/cv_mb_qrc --cov-fail-under=90
-python -m ruff check src tests experiments
-python -m ruff format --check src tests experiments
-python -m mypy
+python -m pytest
+python -m pytest --cov=src/cv_mb_qrc --cov-report=term-missing --cov-fail-under=90
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy .
 python -m build
 python experiments/measurement_based_reservoir/main.py \
   --config experiments/measurement_based_reservoir/config_ci.json \
   --output /tmp/cv-mb-qrc-ci
-python experiments/measurement_based_reservoir/verify_provenance.py /tmp/cv-mb-qrc-ci
+cvmbqrc verify-run /tmp/cv-mb-qrc-ci
+python experiments/measurement_based_reservoir/main.py \
+  --config experiments/measurement_based_reservoir/config_publication.json --dry-run
 ```
 
 Historical outputs created under the old `photographiqml` namespace live only in
@@ -80,4 +81,8 @@ non-Gaussian superiority or edge-of-chaos behavior.
 
 Read the [design audit](docs/research/measurement_based_quantum_reservoir_design.md),
 [tutorial](docs/tutorials/measurement-based-reservoir.md), [experiment protocol](experiments/measurement_based_reservoir/README.md),
-and [implementation report](docs/research/measurement_based_quantum_reservoir_report.md).
+[statistical methods](docs/research/statistical_methods.md),
+[evidence protocol](docs/research/evidence_provenance.md),
+[hardware-readout boundary](docs/research/hardware_readout_limitations.md), and
+[full reproducibility guide](docs/research/reproducibility_guide.md). The
+publication configuration never starts without `--confirm-publication`.

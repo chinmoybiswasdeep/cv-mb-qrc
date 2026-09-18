@@ -7,6 +7,41 @@ import numpy as np
 from .config import BackendCapabilityError, CVConfig
 
 
+def measurement_budget(memory_modes, tier, *, shots_per_setting=1000):
+    """Conservative state-copy budget for a future homodyne implementation.
+
+    Means and diagonal variances share a single-quadrature setting. Each
+    off-diagonal covariance additionally requires a rotated joint-quadrature
+    setting. This is a budgeting roadmap, not an implemented measurement path.
+    """
+    if isinstance(memory_modes, bool) or not isinstance(memory_modes, int) or memory_modes < 1:
+        raise ValueError("memory_modes must be a positive integer")
+    if tier not in ("A", "B"):
+        raise ValueError("Measurement budgeting is defined for Tier A or B")
+    if (
+        isinstance(shots_per_setting, bool)
+        or not isinstance(shots_per_setting, int)
+        or shots_per_setting < 1
+    ):
+        raise ValueError("shots_per_setting must be a positive integer")
+    quadratures = 2 * memory_modes
+    settings = quadratures if tier == "A" else quadratures * (quadratures + 1) // 2
+    feature_count = 2 * quadratures if tier == "A" else quadratures + settings
+    return {
+        "tier": tier,
+        "memory_modes": memory_modes,
+        "simulator_feature_count": feature_count,
+        "minimum_distinct_homodyne_settings": settings,
+        "shots_per_setting": shots_per_setting,
+        "state_copies": settings * shots_per_setting,
+        "status": "roadmap-only; tap/backaction channel unavailable",
+        "assumptions": (
+            "means co-estimated with diagonal variances; one additional rotated setting "
+            "per off-diagonal covariance"
+        ),
+    }
+
+
 class GaussianReadout(ABC):
     """Readout protocol independent of reservoir state evolution."""
 

@@ -32,8 +32,10 @@ mask, bias, features, chronological partitions and ridge selection as the CV
 reservoir. Agreement is evidence of efficient classical reproducibility, not
 quantum advantage.
 
-The Graphix implementation remains a one-memory-qubit collision reference. It
-is not presented as a generic topology-configurable MBQC reservoir. MentPy
+The executable Graphix implementation remains a one-memory-qubit collision
+reference. A guarded builder validates chain, ring, star, brickwork and explicit
+small topology designs, but those designs are not presented as executable
+generic reservoirs. MentPy
 validates only the corrected pure-wire common subset and never CV physics or a
 general mixed-state Graphix channel.
 
@@ -54,10 +56,14 @@ column filtering precede validation-only ridge selection. Test targets are
 evaluated once after selection.
 
 Capacity targets use orthogonal linear, quadratic-self and cross-delay
-polynomials. The primary statistic is permutation-null-corrected signed capacity.
-Each null repetition circularly shifts targets within each split and repeats the
-training/validation selection path. The clipped positive total is retained only
-as `legacy_clipped_capacity`.
+polynomials. Null transformations are applied to the complete target matrix
+before chronological splitting. Circular shift, block permutation and
+independent-surrogate nulls are calibrated; block permutation is the default
+because development calibration produced 0/270 discoveries across its three
+null controls while retaining 31/90 known linear-memory components. Raw R²,
+signed bias correction, finite-sample empirical p, BH q, null intervals and
+separate families are stored. A positive corrected value is not capacity
+evidence unless it passes the declared FDR threshold.
 
 Scientific confidence intervals use a hierarchical bootstrap: dataset seeds are
 sampled first, followed by reservoir seeds within each sampled dataset. The CI
@@ -86,6 +92,8 @@ Every run records resolved configuration and hash, repository and PhotoGraphiQ
 commits/dirty status, implementation hashes, dataset hashes, split hash, seed
 roles, dependency versions, exact command, timestamps, expected/completed/failure
 manifests and report status. `verify_provenance.py` reports exact mismatches.
+The content index hashes every raw job, atomic completion marker, cache, table,
+figure and report. Verification reconstructs all stored tables from raw jobs.
 Publication validity additionally requires publication study class, clean source
 worktrees, exact summary hashes, all required methods and seeds, complete null
 repetitions and completed report generation. Every raw JSON file is rejected if

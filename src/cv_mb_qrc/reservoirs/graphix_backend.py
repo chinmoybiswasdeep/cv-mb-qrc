@@ -1,4 +1,9 @@
-"""Graphix 0.4 collision reservoir; optional imports occur only on selection."""
+"""Graphix 0.4 collision reservoir; optional imports occur only on selection.
+
+The executable reservoir remains the audited one-memory-qubit collision family.
+Topology helpers below support guarded design/visualization but are not presented
+as an implemented generic mixed-state MBQC reservoir.
+"""
 
 from dataclasses import asdict
 from importlib.metadata import version
@@ -9,6 +14,60 @@ import numpy as np
 from .base import MeasurementBasedReservoir, input_vector
 from .config import QubitConfig, integer
 from .results import ReservoirResult
+
+
+def build_guarded_topology(
+    memory_qubits=1,
+    fresh_qubits=1,
+    *,
+    kind="chain",
+    explicit_edges=None,
+    max_live_qubits=8,
+):
+    """Resolve small design topologies without starting an exponential simulation."""
+    integer(memory_qubits, "memory_qubits", 1)
+    integer(fresh_qubits, "fresh_qubits", 1)
+    integer(max_live_qubits, "max_live_qubits", 2)
+    count = memory_qubits + fresh_qubits
+    if count > max_live_qubits:
+        raise MemoryError("Requested topology exceeds max_live_qubits")
+    nodes = tuple(range(count))
+    if kind == "explicit":
+        if explicit_edges is None:
+            raise ValueError("Explicit topology requires explicit_edges")
+        edges = {tuple(sorted(map(int, edge))) for edge in explicit_edges}
+    elif kind == "chain":
+        edges = {(node, node + 1) for node in range(count - 1)}
+    elif kind == "ring":
+        if count < 3:
+            raise ValueError("Ring topology requires at least three qubits")
+        edges = {(node, node + 1) for node in range(count - 1)} | {(0, count - 1)}
+    elif kind == "star":
+        edges = {(0, node) for node in range(1, count)}
+    elif kind == "brickwork":
+        width = (count + 1) // 2
+        rows = (tuple(range(width)), tuple(range(width, count)))
+        edges = {
+            tuple(sorted((row[index], row[index + 1])))
+            for row in rows
+            for index in range(len(row) - 1)
+        }
+        edges |= {(column, width + column) for column in range(0, min(width, count - width), 2)}
+    else:
+        raise ValueError("Topology must be chain, ring, star, brickwork, or explicit")
+    if any(left == right or left not in nodes or right not in nodes for left, right in edges):
+        raise ValueError("Topology contains a loop or an out-of-range node")
+    return {
+        "kind": kind,
+        "nodes": list(nodes),
+        "edges": [list(edge) for edge in sorted(edges)],
+        "memory_nodes": list(range(memory_qubits)),
+        "fresh_nodes": list(range(memory_qubits, count)),
+        "retained_nodes": list(range(memory_qubits)),
+        "measured_nodes": list(range(memory_qubits, count)),
+        "max_live_qubits": max_live_qubits,
+        "execution_status": "design-only; generic reservoir execution is unsupported",
+    }
 
 
 def require_graphix():

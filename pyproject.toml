@@ -16,6 +16,9 @@ dependencies = [
   "networkx>=3.2",
 ]
 
+[project.scripts]
+cvmbqrc = "cv_mb_qrc.cli:main"
+
 [project.optional-dependencies]
 graphix = ["graphix==0.4"]
 validation = ["mentpy==0.1.0a15"]

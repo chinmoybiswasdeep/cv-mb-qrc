@@ -5,6 +5,12 @@ docs/research/measurement_based_quantum_reservoir_files.txt
 pyproject.toml
 docs/research/measurement_based_quantum_reservoir_design.md
 docs/research/measurement_based_quantum_reservoir_report.md
+docs/research/statistical_methods.md
+docs/research/evidence_provenance.md
+docs/research/hardware_readout_limitations.md
+docs/research/reproducibility_guide.md
+docs/research/claims_and_evidence.md
+docs/research/publication_readiness_checklist.md
 docs/tutorials/measurement-based-reservoir.md
 notebooks/06_measurement_based_quantum_reservoir.ipynb
 src/cv_mb_qrc/__init__.py
@@ -12,6 +18,7 @@ src/cv_mb_qrc/py.typed
 src/cv_mb_qrc/reservoirs/__init__.py
 src/cv_mb_qrc/reservoirs/base.py
 src/cv_mb_qrc/reservoirs/benchmarks.py
+src/cv_mb_qrc/reservoirs/calibration.py
 src/cv_mb_qrc/reservoirs/config.py
 src/cv_mb_qrc/reservoirs/cv.py
 src/cv_mb_qrc/reservoirs/diagnostics.py
@@ -21,7 +28,10 @@ src/cv_mb_qrc/reservoirs/gaussian_twin.py
 src/cv_mb_qrc/reservoirs/graphix_backend.py
 src/cv_mb_qrc/reservoirs/mentpy_backend.py
 src/cv_mb_qrc/reservoirs/readout.py
+src/cv_mb_qrc/reservoirs/plotting.py
+src/cv_mb_qrc/reservoirs/reporting.py
 src/cv_mb_qrc/reservoirs/results.py
+src/cv_mb_qrc/cli.py
 src/cv_mb_qrc/reservoirs/temporal.py
 src/cv_mb_qrc/reservoirs/validation.py
 tests/reservoirs/test_benchmarks.py
@@ -31,6 +41,8 @@ tests/reservoirs/test_qubit.py
 tests/reservoirs/test_experiment_protocol.py
 tests/reservoirs/test_gaussian_twin.py
 tests/reservoirs/test_provenance.py
+tests/reservoirs/test_capacity_statistics.py
+tests/reservoirs/test_plotting.py
 tests/reservoirs/test_v2_semantics.py
 tests/mentpy_reference/requirements.txt
 experiments/measurement_based_reservoir/.gitignore
@@ -38,6 +50,8 @@ experiments/measurement_based_reservoir/config_full.json
 experiments/measurement_based_reservoir/config_small.json
 experiments/measurement_based_reservoir/config_ci.json
 experiments/measurement_based_reservoir/config_publication.json
+experiments/measurement_based_reservoir/config_calibration_development.json
+experiments/measurement_based_reservoir/config_scaling.json
 experiments/measurement_based_reservoir/main.py
 experiments/measurement_based_reservoir/README.md
 experiments/measurement_based_reservoir/reproduce.py

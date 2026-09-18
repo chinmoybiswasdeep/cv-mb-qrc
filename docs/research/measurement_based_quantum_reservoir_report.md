@@ -210,8 +210,11 @@ For the separate Fock numerical record:
 ```python
 from cv_mb_qrc.reservoirs.fock import cutoff_study
 from cv_mb_qrc.reservoirs.results import atomic_json
-atomic_json("experiments/measurement_based_reservoir/results_legacy/raw/fock.json",
-            cutoff_study([.02, .04], cutoffs=(8, 12, 16)))
+
+atomic_json(
+    "experiments/measurement_based_reservoir/results_legacy/raw/fock.json",
+    cutoff_study([0.02, 0.04], cutoffs=(8, 12, 16)),
+)
 ```
 
 Then rerun `reproduce.py` to regenerate its optional convergence figure. The

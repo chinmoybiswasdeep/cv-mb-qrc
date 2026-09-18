@@ -5,6 +5,47 @@ from importlib.metadata import version
 import numpy as np
 
 
+def backend_compatibility_matrix():
+    """Audited native capability matrix; unsupported cells are never emulated."""
+    return {
+        "corrected_pure_xy_wire": {
+            "internal_reference": True,
+            "graphix": True,
+            "mentpy": True,
+            "cv_gaussian": False,
+            "fock": False,
+        },
+        "mixed_collision_channel": {
+            "internal_reference": True,
+            "graphix": True,
+            "mentpy": False,
+            "cv_gaussian": False,
+            "fock": False,
+        },
+        "gaussian_unconditional_channel": {
+            "internal_reference": "affine twin",
+            "graphix": False,
+            "mentpy": False,
+            "cv_gaussian": True,
+            "fock": False,
+        },
+        "conditional_photon_number": {
+            "internal_reference": False,
+            "graphix": False,
+            "mentpy": False,
+            "cv_gaussian": False,
+            "fock": True,
+        },
+        "physical_tap_homodyne_with_surviving_memory": {
+            "internal_reference": False,
+            "graphix": False,
+            "mentpy": False,
+            "cv_gaussian": False,
+            "fock": False,
+        },
+    }
+
+
 def compare_wire(state, angles=(0.2, -0.4)):
     try:
         import mentpy as mp

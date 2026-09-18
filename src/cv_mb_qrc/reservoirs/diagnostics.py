@@ -147,3 +147,43 @@ def hierarchical_bootstrap_summary(
         "bootstrap_method": "dataset_then_reservoir_within_dataset",
         "scientific_uncertainty_valid": True,
     }
+
+
+def paired_hierarchical_summary(
+    left,
+    right,
+    dataset_seeds,
+    reservoir_seeds,
+    *,
+    seed=0,
+    draws=2000,
+    scientific=True,
+):
+    """Summarize paired method differences on the declared replication hierarchy."""
+    left_values, right_values = np.asarray(left, float), np.asarray(right, float)
+    if left_values.shape != right_values.shape:
+        raise ValueError("Paired observations must have identical shapes")
+    differences = left_values - right_values
+    summary = hierarchical_bootstrap_summary(
+        differences,
+        dataset_seeds,
+        reservoir_seeds,
+        seed=seed,
+        draws=draws,
+        scientific=scientific,
+    )
+    standard_deviation = differences.std(ddof=1) if len(differences) > 1 else np.nan
+    summary.update(
+        {
+            "paired_differences": differences.tolist(),
+            "mean_paired_difference": float(differences.mean()),
+            "median_paired_difference": float(np.median(differences)),
+            "paired_effect_size_dz": (
+                float(differences.mean() / standard_deviation)
+                if np.isfinite(standard_deviation) and standard_deviation > 0
+                else None
+            ),
+            "left_win_fraction": float(np.mean(differences > 0)),
+        }
+    )
+    return summary
